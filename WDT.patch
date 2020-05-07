@@ -1,0 +1,453 @@
+diff --git a/target/linux/ramips/dts/mt7628an.dtsi b/target/linux/ramips/dts/mt7628an.dtsi
+index dde572b..b4dfb06 100755
+--- a/target/linux/ramips/dts/mt7628an.dtsi
++++ b/target/linux/ramips/dts/mt7628an.dtsi
+@@ -32,9 +32,9 @@
+ 			reg = <0x0 0x100>;
+ 		};
+ 
+-		watchdog@120 {
++		watchdog@100 {
+ 			compatible = "ralink,mt7628an-wdt", "mtk,mt7621-wdt";
+-			reg = <0x120 0x10>;
++			reg = <0x100 0x10>;
+ 
+ 			resets = <&rstctrl 8>;
+ 			reset-names = "wdt";
+diff --git a/.config b/.config
+index 11384f6..948a7c5 100644
+--- a/.config
++++ b/.config
+@@ -1463,7 +1463,7 @@ CONFIG_PACKAGE_kmod-leds-gpio=y
+ # CONFIG_PACKAGE_kmod-ledtrig-gpio is not set
+ # CONFIG_PACKAGE_kmod-ledtrig-heartbeat is not set
+ # CONFIG_PACKAGE_kmod-ledtrig-morse is not set
+-# CONFIG_PACKAGE_kmod-ledtrig-netdev is not set
++CONFIG_PACKAGE_kmod-ledtrig-netdev=y
+ # CONFIG_PACKAGE_kmod-ledtrig-netfilter is not set
+ # CONFIG_PACKAGE_kmod-ledtrig-oneshot is not set
+ # CONFIG_PACKAGE_kmod-ledtrig-timer is not set
+@@ -1993,31 +1993,31 @@ CONFIG_PACKAGE_luasocket=y
+ #
+ # CONFIG_PACKAGE_micropython is not set
+ # CONFIG_PACKAGE_micropython-lib is not set
+-# CONFIG_PACKAGE_python is not set
+-# CONFIG_PACKAGE_python-base is not set
+-# CONFIG_PACKAGE_python-codecs is not set
+-# CONFIG_PACKAGE_python-compiler is not set
+-# CONFIG_PACKAGE_python-ctypes is not set
+-# CONFIG_PACKAGE_python-db is not set
+-# CONFIG_PACKAGE_python-decimal is not set
+-# CONFIG_PACKAGE_python-distutils is not set
++CONFIG_PACKAGE_python=y
++CONFIG_PACKAGE_python-base=y
++CONFIG_PACKAGE_python-codecs=y
++CONFIG_PACKAGE_python-compiler=y
++CONFIG_PACKAGE_python-ctypes=y
++CONFIG_PACKAGE_python-db=y
++CONFIG_PACKAGE_python-decimal=y
++CONFIG_PACKAGE_python-distutils=y
+ # CONFIG_PACKAGE_python-dns is not set
+-# CONFIG_PACKAGE_python-email is not set
+-# CONFIG_PACKAGE_python-gdbm is not set
++CONFIG_PACKAGE_python-email=y
++CONFIG_PACKAGE_python-gdbm=y
+ # CONFIG_PACKAGE_python-imglib is not set
+-# CONFIG_PACKAGE_python-light is not set
+-# CONFIG_PACKAGE_python-logging is not set
+-# CONFIG_PACKAGE_python-multiprocessing is not set
++CONFIG_PACKAGE_python-light=y
++CONFIG_PACKAGE_python-logging=y
++CONFIG_PACKAGE_python-multiprocessing=y
+ # CONFIG_PACKAGE_python-mysql is not set
+-# CONFIG_PACKAGE_python-ncurses is not set
+-# CONFIG_PACKAGE_python-openssl is not set
++CONFIG_PACKAGE_python-ncurses=y
++CONFIG_PACKAGE_python-openssl=y
+ # CONFIG_PACKAGE_python-pip is not set
+-# CONFIG_PACKAGE_python-pydoc is not set
++CONFIG_PACKAGE_python-pydoc=y
+ # CONFIG_PACKAGE_python-pyserial is not set
+-# CONFIG_PACKAGE_python-setuptools is not set
+-# CONFIG_PACKAGE_python-sqlite3 is not set
+-# CONFIG_PACKAGE_python-unittest is not set
+-# CONFIG_PACKAGE_python-xml is not set
++CONFIG_PACKAGE_python-setuptools=y
++CONFIG_PACKAGE_python-sqlite3=y
++CONFIG_PACKAGE_python-unittest=y
++CONFIG_PACKAGE_python-xml=y
+ # CONFIG_PACKAGE_python-yaml is not set
+ # CONFIG_PACKAGE_python3 is not set
+ # CONFIG_PACKAGE_python3-asyncio is not set
+@@ -2041,6 +2041,7 @@ CONFIG_PACKAGE_luasocket=y
+ # CONFIG_PACKAGE_python3-unittest is not set
+ # CONFIG_PACKAGE_python3-xml is not set
+ # CONFIG_PACKAGE_simplejson is not set
++CONFIG_PACKAGE_watchdogapi=y
+diff --git a/package/base-files/files/etc/watchdogapi_test.py b/package/base-files/files/etc/watchdogapi_test.py
+index e69de29..1a6ca14 100644
+--- a/package/base-files/files/etc/watchdogapi_test.py
++++ b/package/base-files/files/etc/watchdogapi_test.py
+@@ -0,0 +1,54 @@
++from __future__ import print_function
++from watchdogapi import *     
++                                  
++                                 
++def test():                      
++                                  
++    wd = watchdog('/dev/watchdog')    
++                                 
++    print('keep_alive:', end=' ')  
++    try:                              
++        print(wd.keep_alive())   
++    except IOError as e:              
++        print(e)                      
++                                   
++    print('get_status:', end=' ')     
++    try:                          
++        print(wd.get_status())        
++    except IOError as e:
++        print(e)                   
++                                      
++    print('get_boot_status:', end=' ')
++    try:                           
++        print(wd.get_boot_status())
++    except IOError as e:          
++        print(e)                  
++                                         
++    timeout = 60                  
++    print('get_timeout:', end=' ')
++    try:                                 
++        timeout = wd.get_timeout()
++        print(timeout)                   
++    except IOError as e:                 
++        print(e)                  
++                                                                           
++    print('set_timeout:', end=' ')       
++    try:                         
++        for i in range(1, 65536): 
++            wd.set_timeout(i)            
++            assert(wd.get_timeout() == i)
++        wd.set_timeout(timeout)   
++        print('OK')
++    except IOError as e:                 
++        print(e)                  
++                                                                                  
++    print('magic_close:', end=' ')
++    try:                                 
++        wd.magic_close()          
++        print('OK')                      
++    except IOError as e:                 
++        print(e)                  
++                                         
++                                         
++if __name__ == '__main__':        
++    test()        
++
+diff --git a/package/lang-python/Makefile b/package/lang-python/Makefile
+index e69de29..7c8d03f 100755
+--- a/package/lang-python/Makefile
++++ b/package/lang-python/Makefile
+@@ -0,0 +1,54 @@
++include $(TOPDIR)/rules.mk
++
++PKG_NAME:=watchdogapi
++PKG_VERSION:=1.0
++PKG_RELEASE:=1
++
++PKG_SOURCE_PROTO:=git
++PKG_SOURCE_URL:=https://github.com/Jeffson-wu/watchdogapi.git
++PKG_SOURCE_SUBDIR:=$(PKG_NAME)-$(PKG_VERSION)
++PKG_SOURCE_VERSION:=63dd75dfac7f1ad2bf36ceeb9b0b606e4c9558b0
++PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-$(PKG_SOURCE_VERSION).tar.gz
++
++PKG_BUILD_DEPENDS:=python-setuptools 
++
++include $(INCLUDE_DIR)/package.mk
++$(call include_mk, python-package.mk)
++
++define Package/watchdogapi
++    SECTION:=lang-python
++    CATEGORY:=Languages
++    SUBMENU:=Python
++    TITLE:=watchdogapi
++    URL:=https://pypi.python.org/pypi/watchdogapi
++    DEPENDS:=+python
++endef
++
++define Package/watchdogapi/description
++    Linux watchdog device API for Python (watchdogapi)
++endef
++
++define Build/Compile
++	$(call Build/Compile/PyMod,., \
++	install --prefix="/usr" --root="$(PKG_INSTALL_DIR)" \
++	)
++endef
++
++define Build/InstallDev
++	$(INSTALL_DIR) $(STAGING_DIR)$(PYTHON_PKG_DIR)
++	$(CP) \
++	$(PKG_INSTALL_DIR)$(PYTHON_PKG_DIR)/* \
++	$(STAGING_DIR)$(PYTHON_PKG_DIR)/
++	[ ! -e $(PKG_INSTALL_DIR)/usr/include ] || $(CP) \
++	$(PKG_INSTALL_DIR)/usr/include/* \
++	$(STAGING_DIR)/usr/include/
++endef
++
++define Package/watchdogapi/install
++	$(INSTALL_DIR) $(1)$(PYTHON_PKG_DIR)/
++	$(CP) \
++	$(PKG_INSTALL_DIR)$(PYTHON_PKG_DIR)/* \
++	$(1)$(PYTHON_PKG_DIR)/
++endef
++
++$(eval $(call BuildPackage,watchdogapi))
+diff --git a/package/system/procd/patches/0002-magiclose.patch b/package/system/procd/patches/0002-magiclose.patch
+index e69de29..ad3f7df 100755
+--- a/package/system/procd/patches/0002-magiclose.patch
++++ b/package/system/procd/patches/0002-magiclose.patch
+@@ -0,0 +1,176 @@
++diff --git a/system.c b/system.c
++old mode 100755
++new mode 100644
++index fb7fbe4..b966dbc
++--- a/system.c
+++++ b/system.c
++@@ -238,6 +238,7 @@ static int system_upgrade(struct ubus_context *ctx, struct ubus_object *obj,
++ enum {
++ 	WDT_FREQUENCY,
++ 	WDT_TIMEOUT,
+++	WDT_MAGICCLOSE,
++ 	WDT_STOP,
++ 	__WDT_MAX
++ };
++@@ -245,6 +246,7 @@ enum {
++ static const struct blobmsg_policy watchdog_policy[__WDT_MAX] = {
++ 	[WDT_FREQUENCY] = { .name = "frequency", .type = BLOBMSG_TYPE_INT32 },
++ 	[WDT_TIMEOUT] = { .name = "timeout", .type = BLOBMSG_TYPE_INT32 },
+++	[WDT_MAGICCLOSE] = { .name = "magicclose", .type = BLOBMSG_TYPE_BOOL },
++ 	[WDT_STOP] = { .name = "stop", .type = BLOBMSG_TYPE_BOOL },
++ };
++ 
++@@ -278,6 +280,9 @@ static int watchdog_set(struct ubus_context *ctx, struct ubus_object *obj,
++ 			timeout = frequency * 2;
++ 		 watchdog_timeout(timeout);
++ 	}
+++	
+++	if (tb[WDT_MAGICCLOSE])
+++                watchdog_set_magicclose(blobmsg_get_bool(tb[WDT_MAGICCLOSE]));
++ 
++ 	if (tb[WDT_STOP])
++ 		watchdog_set_stopped(blobmsg_get_bool(tb[WDT_STOP]));
++@@ -293,6 +298,7 @@ static int watchdog_set(struct ubus_context *ctx, struct ubus_object *obj,
++ 	blobmsg_add_string(&b, "status", status);
++ 	blobmsg_add_u32(&b, "timeout", watchdog_timeout(0));
++ 	blobmsg_add_u32(&b, "frequency", watchdog_frequency(0));
+++	blobmsg_add_u8(&b, "magicclose", watchdog_get_magicclose());
++ 	ubus_send_reply(ctx, req, b.head);
++ 
++ 	return 0;
++diff --git a/watchdog.c b/watchdog.c
++old mode 100755
++new mode 100644
++index 592ae7e..4b26819
++--- a/watchdog.c
+++++ b/watchdog.c
++@@ -31,6 +31,7 @@
++ static struct uloop_timeout wdt_timeout;
++ static int wdt_fd = -1;
++ static int wdt_frequency = 5;
+++static bool wdt_magicclose = false;
++ 
++ void watchdog_ping(void)
++ {
++@@ -45,12 +46,66 @@ static void watchdog_timeout_cb(struct uloop_timeout *t)
++ 	uloop_timeout_set(t, wdt_frequency * 1000);
++ }
++ 
+++static int watchdog_open(bool cloexec)
+++{
+++       char *env = getenv("WDTFD");
+++
+++       if (wdt_fd >= 0)
+++               return wdt_fd;
+++
+++       if (env) {
+++               DEBUG(2, "Watchdog handover: fd=%s\n", env);
+++               wdt_fd = atoi(env);
+++               unsetenv("WDTFD");
+++       } else {
+++               wdt_fd = open(WDT_PATH, O_WRONLY);
+++       }
+++
+++       if (wdt_fd < 0)
+++               return wdt_fd;
+++
+++       if (cloexec)
+++               fcntl(wdt_fd, F_SETFD, fcntl(wdt_fd, F_GETFD) | FD_CLOEXEC);
+++
+++       return wdt_fd;
+++}
+++
+++static void watchdog_close(void)
+++{
+++       if (wdt_fd < 0)
+++               return;
+++
+++       if (write(wdt_fd, "V", 1) < 0)
+++               ERROR("WDT failed to write release: %s\n", strerror(errno));
+++
+++       if (close(wdt_fd) == -1)
+++               ERROR("WDT failed to close watchdog: %s\n", strerror(errno));
+++
+++       wdt_fd = -1;
+++}
+++
+++void watchdog_set_magicclose(bool val)
+++{
+++       wdt_magicclose = val;
+++}
+++
+++bool watchdog_get_magicclose(void)
+++{
+++       return wdt_magicclose;
+++}
+++
+++
++ void watchdog_set_stopped(bool val)
++ {
++-	if (val)
+++	if (val) {
++ 		uloop_timeout_cancel(&wdt_timeout);
++-	else
+++		if (wdt_magicclose)
+++			watchdog_close();
+++	}
+++	else {
+++		watchdog_open(true);
++ 		watchdog_timeout_cb(&wdt_timeout);
+++	}
++ }
++ 
++ bool watchdog_get_stopped(void)
++@@ -98,26 +153,28 @@ char* watchdog_fd(void)
++ 
++ void watchdog_init(int preinit)
++ {
++-	char *env = getenv("WDTFD");
+++//	char *env = getenv("WDTFD");
++ 
++-	if (wdt_fd >= 0)
++-		return;
+++//	if (wdt_fd >= 0)
+++//		return;
++ 
++ 	wdt_timeout.cb = watchdog_timeout_cb;
++-	if (env) {
+++/*	if (env) {
++ 		DEBUG(2, "Watchdog handover: fd=%s\n", env);
++ 		wdt_fd = atoi(env);
++ 		unsetenv("WDTFD");
++ 	} else {
++ 		wdt_fd = open("/dev/watchdog", O_WRONLY);
++ 	}
++-
++-	if (wdt_fd < 0)
+++*/
+++/*	if (wdt_fd < 0)
++ 		return;
++-
++-	if (!preinit)
+++*/
+++	if (watchdog_open(!preinit) < 0)
+++		return;
+++/*	if (!preinit)
++ 		fcntl(wdt_fd, F_SETFD, fcntl(wdt_fd, F_GETFD) | FD_CLOEXEC);
++-
+++*/
++ 	LOG("- watchdog -\n");
++ 	watchdog_timeout(30);
++ 	watchdog_timeout_cb(&wdt_timeout);
++diff --git a/watchdog.h b/watchdog.h
++old mode 100755
++new mode 100644
++index 015fa93..ae49185
++--- a/watchdog.h
+++++ b/watchdog.h
++@@ -19,6 +19,8 @@ void watchdog_init(int preinit);
++ char* watchdog_fd(void);
++ int watchdog_timeout(int timeout);
++ int watchdog_frequency(int frequency);
+++void watchdog_set_magicclose(bool val);
+++bool watchdog_get_magicclose(void);
++ void watchdog_set_stopped(bool val);
++ bool watchdog_get_stopped(void);
++ void watchdog_no_cloexec(void);
+diff --git a/package/system/procd/patches/0003-Remove-WDT-Code.patch b/package/system/procd/patches/0003-Remove-WDT-Code.patch
+index e69de29..d2122f9 100755
+--- a/package/system/procd/patches/0003-Remove-WDT-Code.patch
++++ b/package/system/procd/patches/0003-Remove-WDT-Code.patch
+@@ -0,0 +1,62 @@
++diff --git a/initd/init.c b/initd/init.c
++old mode 100755
++new mode 100644
++index 9818c4f..ce0e861
++--- a/initd/init.c
+++++ b/initd/init.c
++@@ -80,7 +80,7 @@ main(int argc, char **argv)
++ 
++ 	early();
++ 	cmdline();
++-	watchdog_init(1);
+++//	watchdog_init(1);
++ 
++ 	pid = fork();
++ 	if (!pid) {
++@@ -110,7 +110,7 @@ main(int argc, char **argv)
++ 			if (waitpid(pid, NULL, WNOHANG) > 0)
++ 				break;
++ 			sleep(1);
++-			watchdog_ping();
+++//			watchdog_ping();
++ 		}
++ 	}
++ 	uloop_init();
++diff --git a/state.c b/state.c
++old mode 100755
++new mode 100644
++index 1ed70f5..ec0f4ad
++--- a/state.c
+++++ b/state.c
++@@ -100,14 +100,14 @@ static void state_enter(void)
++ 	switch (state) {
++ 	case STATE_EARLY:
++ 		LOG("- early -\n");
++-		watchdog_init(0);
+++		//watchdog_init(0);
++ 		hotplug("/etc/hotplug.json");
++ 		procd_coldplug();
++ 		break;
++ 
++ 	case STATE_UBUS:
++ 		// try to reopen incase the wdt was not available before coldplug
++-		watchdog_init(0);
+++		//watchdog_init(0);
++ 		set_stdio("console");
++ 		LOG("- ubus -\n");
++ 		procd_connect_ubus();
++diff --git a/upgraded/upgraded.c b/upgraded/upgraded.c
++old mode 100755
++new mode 100644
++index d7433e7..34048b9
++--- a/upgraded/upgraded.c
+++++ b/upgraded/upgraded.c
++@@ -70,7 +70,7 @@ int main(int argc, char **argv)
++ 	}
++ 
++ 	uloop_init();
++-	watchdog_init(0);
+++	//watchdog_init(0);
++ 	sysupgarde(argv[1]);
++ 	uloop_run();
++ 
